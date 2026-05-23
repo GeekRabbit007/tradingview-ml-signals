@@ -2,8 +2,11 @@ name: Update Pine Seeds ML Signals
 
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Каждые 15 минут (максимум для бесплатного GitHub)
-  workflow_dispatch:  # Ручной запуск
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   update-signals:
