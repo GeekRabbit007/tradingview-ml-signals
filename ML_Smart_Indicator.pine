@@ -9,7 +9,7 @@ indicator("ML Smart Adaptive Indicator", shorttitle="ML-SAI", overlay=true, max_
 // ─── Inputs ─────────────────────────────────────────────────────────────────
 group_ml = "ML Signal Source"
 repo_name = input.string("GeekRabbit007/tradingview-ml-signals", "Pine Seeds Repo", group=group_ml, tooltip="GitHub репозиторий для Pine Seeds")
-symbol_file = input.string("BTCUSDT_15", "Signal File (ticker_timeframe)", group=group_ml)
+symbol_file = input.string("BTCUSDT", "Signal File (ticker_timeframe)", group=group_ml)
 signal_threshold = input.float(0.65, "Min Confidence", minval=0.5, maxval=1.0, step=0.05, group=group_ml)
 
 group_display = "Display Settings"
