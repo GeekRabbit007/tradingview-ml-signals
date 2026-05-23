@@ -1,0 +1,33 @@
+name: Update Pine Seeds ML Signals
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Каждые 15 минут (максимум для бесплатного GitHub)
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  update-signals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pandas
+
+      - name: Fetch ML signals from server
+        env:
+          ML_SERVER_URL: ${{ secrets.ML_SERVER_URL }}
+        run: python scripts/fetch_signals.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update ML signals $(date -u +%Y-%m-%d_%H:%M)"
+          git push
