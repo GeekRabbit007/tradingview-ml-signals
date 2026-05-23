@@ -4,13 +4,11 @@ indicator("ML Smart Adaptive Indicator", shorttitle="ML-SAI", overlay=true, max_
 // ══════════════════════════════════════════════════════════════════════════════
 // ML Smart Adaptive Indicator for TradingView
 // Читает сигналы ML-модели из Pine Seeds (GitHub репозиторий)
-// 
-// Требуется настроить Pine Seeds репозиторий с данными от Python ML Server
 // ══════════════════════════════════════════════════════════════════════════════
 
 // ─── Inputs ─────────────────────────────────────────────────────────────────
 group_ml = "ML Signal Source"
-repo_name = input.string("yourusername/tradingview-ml-signals", "Pine Seeds Repo", group=group_ml, tooltip="GitHub репозиторий для Pine Seeds")
+repo_name = input.string("GeekRabbit007/tradingview-ml-signals", "Pine Seeds Repo", group=group_ml, tooltip="GitHub репозиторий для Pine Seeds")
 symbol_file = input.string("BTCUSDT_1", "Signal File (ticker_timeframe)", group=group_ml)
 signal_threshold = input.float(0.65, "Min Confidence", minval=0.5, maxval=1.0, step=0.05, group=group_ml)
 
@@ -30,7 +28,6 @@ float ml_anomaly = request.seed(repo_name, symbol_file, low)   // low = anomaly_
 float ml_pred_price = request.seed(repo_name, symbol_file, open) // open = predicted_price
 
 // ─── Обработка сигналов ──────────────────────────────────────────────────────
-// Замена na на предыдущее значение (forward fill)
 var float last_signal = 0
 var float last_conf = 0
 var float last_strength = 0
@@ -42,15 +39,12 @@ if not na(ml_signal_raw)
     last_strength := ml_strength
     last_anomaly := ml_anomaly
 
-// Определение состояния
 bool is_buy = last_signal > 0.5 and last_conf >= signal_threshold
 bool is_sell = last_signal < -0.5 and last_conf >= signal_threshold
 bool is_hold = not is_buy and not is_sell
-bool is_anomaly = last_anomaly < -0.3  // anomaly_score отрицательный для аномалий
+bool is_anomaly = last_anomaly < -0.3
 
-// ─── Визуализация на графике ─────────────────────────────────────────────────
-
-// 1. Стрелки сигналов
+// ─── Визуализация ─────────────────────────────────────────────────────────────
 plotshape(is_buy and show_predictions, title="ML Buy", style=shape.triangleup, 
          location=location.belowbar, color=color.new(color.green, 0), size=size.normal, 
          text="ML", textcolor=color.white)
@@ -59,28 +53,19 @@ plotshape(is_sell and show_predictions, title="ML Sell", style=shape.triangledow
          location=location.abovebar, color=color.new(color.red, 0), size=size.normal, 
          text="ML", textcolor=color.white)
 
-// 2. Фоновая зона тренда
 bgcolor(is_buy and show_trend_zones ? color.new(color.green, 90) : 
         is_sell and show_trend_zones ? color.new(color.red, 90) : 
         show_trend_zones ? color.new(color.gray, 95) : na, 
         title="Trend Zone")
 
-// 3. Маркеры аномалий
 plotshape(is_anomaly and show_anomaly_markers, title="Anomaly", style=shape.diamond, 
          location=location.absolute, color=color.new(color.orange, 0), size=size.small,
          text="⚡", textcolor=color.white, offset=0)
 
-// 4. Линия предсказанной цены (если доступна)
 plot(ml_pred_price > 0 ? ml_pred_price : na, title="Predicted Price", 
      color=color.new(color.purple, 0), style=plot.style_line, linewidth=2)
 
-// ─── Панель Confidence (отдельный pane) ──────────────────────────────────────
-// Для отображения в отдельном окне используйте этот скрипт как отдельный индикатор
-// или раскомментируйте для overlay:
-// plot(last_conf, title="Confidence", color=color.blue, display=display.pane)
-// plot(abs(last_strength), title="Strength", color=color.orange, display=display.pane)
-
-// ─── Информационная панель (таблица) ─────────────────────────────────────────
+// ─── Информационная панель ────────────────────────────────────────────────────
 var table info_table = table.new(position.top_right, 2, 6, bgcolor=color.new(color.black, 80), 
                                border_width=1, border_color=color.gray)
 
@@ -110,7 +95,15 @@ if barstate.islast and show_confidence_panel
     table.cell(info_table, 1, 5, "v" + str.tostring(int(last_conf * 100)), 
               text_color=color.white, text_size=size.small)
 
-// ─── Алерты ──────────────────────────────────────────────────────────────────
-alertcondition(is_buy, title="ML Buy Signal", message='{"ticker":"{{ticker}}","signal":"BUY","price":{{close}},"confidence":' + str.tostring(last_conf) + '}')
-alertcondition(is_sell, title="ML Sell Signal", message='{"ticker":"{{ticker}}","signal":"SELL","price":{{close}},"confidence":' + str.tostring(last_conf) + '}')
-alertcondition(is_anomaly, title="ML Anomaly Detected", message='{"ticker":"{{ticker}}","signal":"ANOMALY","price":{{close}}}')
+// ─── Алерты ────────────────────────────────────────────────────────────────────────
+alertcondition(is_buy, title="ML Buy Signal", 
+              message=str.format('{"ticker":"{0}","signal":"BUY","price":{1},"confidence":{2}', 
+                               syminfo.tickerid, close, last_conf))
+
+alertcondition(is_sell, title="ML Sell Signal", 
+              message=str.format('{"ticker":"{0}","signal":"SELL","price":{1},"confidence":{2}', 
+                               syminfo.tickerid, close, last_conf))
+
+alertcondition(is_anomaly, title="ML Anomaly Detected", 
+              message=str.format('{"ticker":"{0}","signal":"ANOMALY","price":{1}', 
+                               syminfo.tickerid, close))
